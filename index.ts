@@ -1,11 +1,20 @@
 import { PNG } from "pngjs";
 import fs from "fs";
+import utils from 'util';
 import * as cp from 'child_process'
 
-const MAX_IMG_INDEX = 1;
+const exec = utils.promisify(cp.exec);
+
+const MAX_IMG_INDEX = 8;
 
 const shader =
-  (a: number, b: number) => (Math.sin(a) > Math.sin(b) ? a : b);
+  (a: number, b: number) => a > b ? a : b;
+
+const loadVideo = async (videoSrc: string) => {
+  console.info("loading video...");
+  
+  await exec(`ffmpeg -i ${videoSrc} -crf 30 ./in/%03d.png`);
+}
 
 const loadImages = () => {
   console.info("loading images...");
@@ -60,23 +69,19 @@ const writeImages = (imgs: PNG[]) => {
     );
 };
 
-const writeVideo = () => {
-  return new Promise((resolve, reject) => {
-    console.info("writing video...");
+const writeVideo = async () => {
+  console.info("writing video...");
 
-    // cp.exec('ffmpeg -r 1/2 -i ./out/%03d.png -c:v libx264 -vf "fps=10,format=yuv420p" out.mp4')
-    //   .once('message', console.info)
-    //   .once('error', reject)
-    //   .once('close', resolve);
-    resolve(undefined);
-  })
+  await exec('ffmpeg -r 30 -i ./out/%03d.png -c:v libx264 -vf "fps=30,format=yuv420p" -y out.mp4'); // ,eq=saturation=0
 }
 
 const done = () => console.info('job successfully done');
 
 (function main() {
-  Promise
-    .resolve(loadImages())
+  const videoSrc = '234997993_536576674066123_2334358491780214392_n.mp4';
+
+  loadVideo(videoSrc)
+    .then(loadImages)
     .then(processImages)
     .then(writeImages)
     .then(writeVideo)
